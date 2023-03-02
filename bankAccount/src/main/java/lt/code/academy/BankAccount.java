@@ -9,6 +9,7 @@ import org.bson.codecs.configuration.CodecRegistries;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 public class BankAccount {
@@ -29,39 +30,37 @@ public class BankAccount {
     }
 
     private void putMoney() {
-        System.out.println("Kiek pinigu norite inesti:");
-        double sum = Double.parseDouble(sc.nextLine());
+        double sum = getCorrectNumber("Kiek pinigu norite įnešti:");
         user.setBalance(user.getBalance() + sum);
         double userBalance = user.getBalance();
         usersCollection.updateOne(eq("_id", user.getId()), set("balance", userBalance));
-        System.out.printf("Saskaita papildyta, saskaitos likutis: %s eur%n", userBalance);
+        System.out.printf("Jūsų sąskaita papildyta, saskaitos likutis: %s eur%n", userBalance);
     }
 
     private void checkBalance() {
-        System.out.printf("Jusu pinigu likutis yra %s eur%n", user.getBalance());
+        System.out.printf("Jūsų pinigų likutis yra %s eur%n", user.getBalance());
     }
 
     private void transferMoney() {
-        System.out.println("Iveskite vartotojo varda, kam norite pervesti pinigus:");
+        System.out.println("Iveskite vartotojo vardą, kam norite pervesti pinigus:");
         String receiver = sc.nextLine();
         User receiverUser = usersCollection.find(eq("userName", receiver)).first();
         if (receiverUser == null) {
-            System.out.println("Tokio vartotojo nera");
+            System.out.println("Tokio vartotojo nėra");
             return;
         }
-        System.out.println("Iveskite pervedama suma:");
-        double sum = Double.parseDouble(sc.nextLine());
+        double sum = getCorrectNumber("Įveskite pervedamą sumą");
         double userBalance = user.getBalance();
         if (userBalance >= sum) {
             user.setBalance(userBalance - sum);
             receiverUser.setBalance(receiverUser.getBalance() + sum);
             usersCollection.updateOne(eq("_id", user.getId()), set("balance", user.getBalance()));
             usersCollection.updateOne(eq("_id", receiverUser.getId()), set("balance", receiverUser.getBalance()));
-            System.out.printf("Jus pervedete %s eur vartotojui %s %s%n Jusu pinigu likutis %s%n",
+            System.out.printf("Jūs pervedėte %s eur vartotojui %s %s%nJūsų pinigų likutis %s%n",
                     sum, receiverUser.getName(), receiverUser.getLastName(), user.getBalance());
             return;
         }
-        System.out.println("Nepakankamas pinigu likutis");
+        System.out.println("Nepakankamas pinigų likutis");
     }
 
     private void userAction(String action) {
@@ -69,8 +68,8 @@ public class BankAccount {
             case "1" -> transferMoney();
             case "2" -> checkBalance();
             case "3" -> putMoney();
-            case "4" -> System.out.println("Programa baige darba");
-            default -> System.out.println("Tokios funkcijos nera");
+            case "4" -> System.out.println("Programa baigė darbą");
+            default -> System.out.println("Tokios funkcijos nėra");
         }
     }
 
@@ -78,10 +77,10 @@ public class BankAccount {
         String action;
         do {
             System.out.println("""
-                1 - Pervesti pinigus
-                2 - Pasitikrinti saskaitos likuti
-                3 - Ideti pinigu
-                4 - Iseiti
+                1 - Pervesti pinigus kitam vartotojui
+                2 - Pasitikrinti sąskaitos likutį
+                3 - Įnešti pinigus
+                4 - Išeiti
                 """);
             action = sc.nextLine();
             userAction(action);
@@ -96,24 +95,23 @@ public class BankAccount {
         switch (action) {
             case "1" -> registration();
             case "2" -> login();
-            default -> System.out.println("Tokios funkcijos nera");
+            default -> System.out.println("Tokios funkcijos nėra");
         }
 
     }
 
-    public void registration() {
-        System.out.println("Iveskite prisijungimo varda");
+    private void registration() {
+        System.out.println("Įveskite prisijungimo vardą");
         String userName = sc.nextLine();
-        System.out.println("Iveskite savo varda");
+        System.out.println("Įveskite savo vardą");
         String name = sc.nextLine();
-        System.out.println("Iveskite savo pavarde");
+        System.out.println("Įveskite savo pavardę");
         String lastName = sc.nextLine();
-        System.out.println("Iveskite pradine suma pinigu");
-        double sum = Double.parseDouble(sc.nextLine());
+        double sum = getCorrectNumber("Įveskite pradinę sumą pinigu:");
         FindIterable<User> users = usersCollection.find();
         for (User u: users) {
             if (u.getUserName().equals(userName)) {
-                System.out.println("Toks vartotojo vardas jau uzimtas");
+                System.out.println("Toks vartotojo vardas jau užimtas");
                 welcomeMenu();
             }
         }
@@ -122,20 +120,28 @@ public class BankAccount {
         welcomeMenu();
     }
 
-    public void login() {
-        System.out.println("Iveskite prisijungimo varda:");
-        String userName = sc.nextLine();
-        FindIterable<User> users = usersCollection.find();
-        for (User u: users) {
-            if (u.getUserName().equals(userName)) {
-                user = u;
-                System.out.println("Sekmigai prisijungete");
-                menu();
-                return;
+    private void login() {
+        while (user == null) {
+            System.out.println("Įveskite prisijungimo vardą:");
+            String userName = sc.nextLine();
+            user = usersCollection.find(eq("userName", userName)).first();
+            if (user == null) {
+                System.out.println("Tokio vartotojo nėra");
             }
         }
-        System.out.println("Tokio vartotojo nera");
-        welcomeMenu();
+        System.out.printf("Sėkmingai prisijungėte %s %s%n", user.getName(), user.getLastName());
+        menu();
+    }
+
+    private double getCorrectNumber(String text) {
+        while (true){
+            try {
+                System.out.println(text);
+                return Double.parseDouble(sc.nextLine());
+            } catch (Exception e) {
+                System.out.println("Blogas formatas");
+            }
+        }
     }
 
 }
