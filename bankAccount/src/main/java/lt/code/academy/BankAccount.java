@@ -101,22 +101,26 @@ public class BankAccount {
     }
 
     private void registration() {
-        System.out.println("Įveskite prisijungimo vardą");
+        System.out.println("Įveskite prisijungimo vardą:");
         String userName = sc.nextLine();
-        System.out.println("Įveskite savo vardą");
-        String name = sc.nextLine();
-        System.out.println("Įveskite savo pavardę");
-        String lastName = sc.nextLine();
-        double sum = getCorrectNumber("Įveskite pradinę sumą pinigu:");
+
         FindIterable<User> users = usersCollection.find();
         for (User u: users) {
             if (u.getUserName().equals(userName)) {
                 System.out.println("Toks vartotojo vardas jau užimtas");
                 welcomeMenu();
+                return;
             }
         }
+
+        System.out.println("Įveskite savo vardą:");
+        String name = sc.nextLine();
+        System.out.println("Įveskite savo pavardę:");
+        String lastName = sc.nextLine();
+        double sum = getCorrectNumber("Įveskite pradinę sumą pinigu:");
         User newUser = new User(null, userName, name, lastName, sum);
         usersCollection.insertOne(newUser);
+        System.out.println("Sėkmingai užsiregistravote");
         welcomeMenu();
     }
 
@@ -129,6 +133,7 @@ public class BankAccount {
                 System.out.println("Tokio vartotojo nėra");
             }
         }
+
         System.out.printf("Sėkmingai prisijungėte %s %s%n", user.getName(), user.getLastName());
         menu();
     }
